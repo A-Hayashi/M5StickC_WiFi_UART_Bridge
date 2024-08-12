@@ -7,7 +7,6 @@ Bridge::Bridge(int uartNo, int baudRate, int serialParam, int rxdPin, int txdPin
   this->serialParam = serialParam;
   this->rxdPin = rxdPin;
   this->txdPin = txdPin;
-  this->tcp = false;
 }
 
 void Bridge::start(void) {
@@ -19,6 +18,14 @@ void Bridge::start(void) {
                           1,            /* プライオリティ */
                           NULL,         /* ハンドル構造体のポインタ */
                           0);           /* 割り当てるコア (0/1) */
+
+  xTaskCreatePinnedToCore(this->periodicTask, /* タスクの入口となる関数名 */
+                          "PeriodicTask",     /* タスクの名称 */
+                          1024,               /* スタックサイズ */
+                          this,               /* パラメータのポインタ */
+                          2,                  /* プライオリティ */
+                          NULL,               /* ハンドル構造体のポインタ */
+                          0);                 /* 割り当てるコア (0/1) */
 }
 
 void Bridge::serialBegin(int baudRate, int serialParam) {
@@ -37,6 +44,15 @@ void Bridge::runner(void *params) {
   }
 }
 
+void Bridge::periodicTask(void *params) {
+  Bridge *ref = static_cast<Bridge *>(params);
+  for (;;) {
+    ref->checkWifiError();
+    ref->checkSerialError();
+    // 1秒（1000ミリ秒）待機
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+  }
+}
 
 void Bridge::tcpLoop() {
   serial.end();
@@ -74,6 +90,7 @@ void Bridge::tcpLoop() {
         Serial.write(buf1, i1);
         Serial.println("");
         serial.write(buf1, i1);  // now send to UART(num):
+        wifiOK();
       }
       i1 = 0;
     }
@@ -94,7 +111,7 @@ void Bridge::tcpLoop() {
           Serial.write(buf2, i2);
           Serial.println("");
           TCPClient.write(buf2, i2);
-          triggerEvent(BRIDGE_COMMUNICATION_OK);
+          serialOK();
         }
       }
       i2 = 0;
@@ -123,6 +140,7 @@ void Bridge::udpLoop() {
       Serial.write(buf1, packetSize);
       Serial.println("");
       serial.write(buf1, packetSize);  // now send to UART(num):
+      wifiOK();
     }
 
     if (serial.available()) {
@@ -143,8 +161,7 @@ void Bridge::udpLoop() {
         udp.beginPacket(remoteIp, remotePort);  // remote IP and port
         udp.write(buf2, i2);
         udp.endPacket();
-
-        triggerEvent(BRIDGE_COMMUNICATION_OK);
+        serialOK();
       }
       i2 = 0;
     }

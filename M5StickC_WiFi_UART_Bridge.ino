@@ -107,6 +107,15 @@ void setup() {
     M5.Lcd.println("IP Address:");
     M5.Lcd.println(localIP);
 
+    EXT_IO.registerCallback([](int code) {
+      Serial.print("EXT_IO:");
+      EXT_IO.dispCode(code);
+    });
+    Grove.registerCallback([](int code) {
+      Serial.print("Grove:");
+      Grove.dispCode(code);
+    });
+    
     EXT_IO.start();
     Grove.start();
   }
@@ -133,6 +142,11 @@ void loop() {
     delay(1000);
 
     // M5StickCを再起動
+    ESP.restart();
+  }
+
+  if (M5.BtnA.wasPressed()) {
+    delay(1000);
     ESP.restart();
   }
 }
