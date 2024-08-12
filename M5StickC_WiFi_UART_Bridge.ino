@@ -2,12 +2,16 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <Preferences.h>
+#include "Bridge.h"
 
 Preferences preferences;
 WebServer server(80);
 
 const char* ap_ssid = "M5StickC-AP";
 const char* ap_password = "12345678";
+
+Bridge EXT_IO(1, 9600, SERIAL_8E1, 0, 26, 8881);  //EXT IO
+Bridge Grove(2, 9600, SERIAL_8E1, 32, 33, 8882);  //Grove
 
 void setup() {
   M5.begin();
@@ -102,6 +106,9 @@ void setup() {
     Serial.println(localIP);
     M5.Lcd.println("IP Address:");
     M5.Lcd.println(localIP);
+
+    EXT_IO.start();
+    Grove.start();
   }
 }
 
