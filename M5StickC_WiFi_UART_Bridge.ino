@@ -12,6 +12,9 @@ const char* ap_password = "12345678";
 
 Bridge EXT_IO(1, 9600, SERIAL_8E1, 0, 26, 8881);  //EXT IO
 Bridge Grove(2, 9600, SERIAL_8E1, 32, 33, 8882);  //Grove
+char comState[4] = { 'O', 'O', 'O', 'O' };
+
+void updateComState(void* params);
 
 void setup() {
   M5.begin();
@@ -106,19 +109,57 @@ void setup() {
     Serial.println(localIP);
     M5.Lcd.println("IP Address:");
     M5.Lcd.println(localIP);
+    M5.Lcd.print("EXT:W/S Grove:W/S");
 
     EXT_IO.registerCallback([](int code) {
       Serial.print("EXT_IO:");
       EXT_IO.dispCode(code);
+
+      switch (code) {
+        case BRIDGE_WIFI_OK:
+          comState[0] = 'O';
+          break;
+        case BRIDGE_WIFI_ERROR:
+          comState[0] = 'X';
+          break;
+        case BRIDGE_SERIAL_OK:
+          comState[1] = 'O';
+          break;
+        case BRIDGE_SERIAL_ERROR:
+          comState[1] = 'X';
+          break;
+      }
     });
     Grove.registerCallback([](int code) {
       Serial.print("Grove:");
       Grove.dispCode(code);
+
+      switch (code) {
+        case BRIDGE_WIFI_OK:
+          comState[2] = 'O';
+          break;
+        case BRIDGE_WIFI_ERROR:
+          comState[2] = 'X';
+          break;
+        case BRIDGE_SERIAL_OK:
+          comState[3] = 'O';
+          break;
+        case BRIDGE_SERIAL_ERROR:
+          comState[3] = 'X';
+          break;
+      }
     });
-    
     EXT_IO.start();
     Grove.start();
   }
+
+  xTaskCreatePinnedToCore(updateComState,   /* タスクの入口となる関数名 */
+                          "updateComState", /* タスクの名称 */
+                          1024,             /* スタックサイズ */
+                          NULL,             /* パラメータのポインタ */
+                          8,                /* プライオリティ */
+                          NULL,             /* ハンドル構造体のポインタ */
+                          0);               /* 割り当てるコア (0/1) */
 }
 
 void loop() {
@@ -148,5 +189,23 @@ void loop() {
   if (M5.BtnA.wasPressed()) {
     delay(1000);
     ESP.restart();
+  }
+}
+
+void updateComState(void* params) {
+  for (;;) {
+    M5.Lcd.fillRect(0, 119, 240, 135, BLACK);  // 最下部の領域を黒で塗りつぶす
+    // 新しいテキストを描画
+    M5.Lcd.setCursor(0, 119);    // カーソル位置を設定
+    M5.Lcd.setTextColor(WHITE);  // テキストの色を設定
+    M5.Lcd.print("    ");
+    M5.Lcd.print(comState[0]);
+    M5.Lcd.print("/");
+    M5.Lcd.print(comState[1]);
+    M5.Lcd.print("       ");
+    M5.Lcd.print(comState[2]);
+    M5.Lcd.print("/");
+    M5.Lcd.print(comState[3]);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
 }

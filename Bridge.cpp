@@ -12,10 +12,10 @@ Bridge::Bridge(int uartNo, int baudRate, int serialParam, int rxdPin, int txdPin
 void Bridge::start(void) {
   /* create task */
   xTaskCreatePinnedToCore(this->runner, /* タスクの入口となる関数名 */
-                          "TASK1",      /* タスクの名称 */
+                          "ComTask",    /* タスクの名称 */
                           1024 * 3,     /* スタックサイズ */
                           this,         /* パラメータのポインタ */
-                          1,            /* プライオリティ */
+                          10,            /* プライオリティ */
                           NULL,         /* ハンドル構造体のポインタ */
                           0);           /* 割り当てるコア (0/1) */
 
@@ -23,7 +23,7 @@ void Bridge::start(void) {
                           "PeriodicTask",     /* タスクの名称 */
                           1024,               /* スタックサイズ */
                           this,               /* パラメータのポインタ */
-                          2,                  /* プライオリティ */
+                          9,                  /* プライオリティ */
                           NULL,               /* ハンドル構造体のポインタ */
                           0);                 /* 割り当てるコア (0/1) */
 }
