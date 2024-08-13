@@ -3,17 +3,9 @@
 #include <WiFi.h>
 #include <WiFiClient.h>
 #include <WiFiUdp.h>
-#include <functional>  // std::functionを使用するために必要
 #include <string>
 
-#define BRIDGE_WIFI_OK (0)
-#define BRIDGE_WIFI_ERROR (1)
-#define BRIDGE_SERIAL_OK (2)
-#define BRIDGE_SERIAL_ERROR (3)
-
 #define bufferSize (1024)
-
-using CallbackFunction = std::function<void(int)>;
 
 class Bridge {
 public:
@@ -24,13 +16,16 @@ public:
   void start();
   void tcpLoop();
   void udpLoop();
-  void serialBegin(int baudRate, int serialParam);
   bool tcp = false;
+
+  typedef void (*CallbackFunction)(String);
   void registerCallback(CallbackFunction callback);
 
-  void dispCode(int code) {
-    static String strings[] = { "BRIDGE_WIFI_OK", "BRIDGE_WIFI_ERROR", "BRIDGE_SERIAL_OK", "BRIDGE_SERIAL_ERROR" };
-    Serial.println(strings[code]);
+  bool getWifiError() {
+    return wifiError;
+  }
+  bool getSerialError() {
+    return serialError;
   }
 private:
   HardwareSerial serial;
@@ -52,15 +47,15 @@ private:
   uint8_t buf2[bufferSize];
   uint16_t i2;
 
-  void triggerEvent(int message);  // イベントが発生した際にコールバック関数を呼び出すメソッド
-  CallbackFunction callback;       // コールバック関数を保持するメンバー変数
+  void triggerEvent(String message);  // イベントが発生した際にコールバック関数を呼び出すメソッド
+  CallbackFunction callback;          // コールバック関数を保持するメンバー変数
 
   int wifiErrorCnt = 5;
   bool wifiError = false;
   void wifiOK() {
     if (wifiError == true) {
       wifiError = false;
-      triggerEvent(BRIDGE_WIFI_OK);
+      triggerEvent("BRIDGE_WIFI_OK");
     }
     wifiErrorCnt = 5;
   }
@@ -72,7 +67,7 @@ private:
     if (wifiErrorCnt == 0) {
       if (wifiError == false) {
         wifiError = true;
-        triggerEvent(BRIDGE_WIFI_ERROR);
+        triggerEvent("BRIDGE_WIFI_ERROR");
       }
     }
   }
@@ -82,7 +77,7 @@ private:
   void serialOK() {
     if (serialError == true) {
       serialError = false;
-      triggerEvent(BRIDGE_SERIAL_OK);
+      triggerEvent("BRIDGE_SERIAL_OK");
     }
     serialErrorCnt = 5;
   }
@@ -94,7 +89,7 @@ private:
     if (serialErrorCnt == 0) {
       if (serialError == false) {
         serialError = true;
-        triggerEvent(BRIDGE_SERIAL_ERROR);
+        triggerEvent("BRIDGE_SERIAL_ERROR");
       }
     }
   }

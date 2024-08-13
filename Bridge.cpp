@@ -15,7 +15,7 @@ void Bridge::start(void) {
                           "ComTask",    /* タスクの名称 */
                           1024 * 3,     /* スタックサイズ */
                           this,         /* パラメータのポインタ */
-                          10,            /* プライオリティ */
+                          10,           /* プライオリティ */
                           NULL,         /* ハンドル構造体のポインタ */
                           0);           /* 割り当てるコア (0/1) */
 
@@ -26,13 +26,6 @@ void Bridge::start(void) {
                           9,                  /* プライオリティ */
                           NULL,               /* ハンドル構造体のポインタ */
                           0);                 /* 割り当てるコア (0/1) */
-}
-
-void Bridge::serialBegin(int baudRate, int serialParam) {
-  this->baudRate = baudRate;
-  this->serialParam = serialParam;
-  serial.end();
-  serial.begin(baudRate, serialParam, rxdPin, txdPin);
 }
 
 void Bridge::runner(void *params) {
@@ -175,8 +168,8 @@ void Bridge::registerCallback(CallbackFunction callback) {
 }
 
 // イベントが発生した際にコールバック関数を呼び出すメソッド
-void Bridge::triggerEvent(int code) {
+void Bridge::triggerEvent(String message) {
   if (callback) {  // コールバックが登録されている場合のみ呼び出し
-    callback(code);
+    callback(message);
   }
 }

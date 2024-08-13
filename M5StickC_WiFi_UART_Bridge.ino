@@ -7,14 +7,14 @@
 Preferences preferences;
 WebServer server(80);
 
-const char* ap_ssid = "M5StickC-AP";
+char ap_ssid[20] = "M5StickC-AP";
 const char* ap_password = "12345678";
 
 Bridge EXT_IO(1, 9600, SERIAL_8E1, 0, 26, 8881);  //EXT IO
 Bridge Grove(2, 9600, SERIAL_8E1, 32, 33, 8882);  //Grove
-char comState[4] = { 'O', 'O', 'O', 'O' };
 
 void updateComState(void* params);
+void appendRandomNumber(char* str);
 
 void setup() {
   M5.begin();
@@ -23,9 +23,7 @@ void setup() {
   M5.Lcd.setRotation(3);     // 90度回転
   M5.Lcd.setTextSize(2);     // 文字サイズを2倍に設定
   M5.Lcd.fillScreen(BLACK);  // 画面を黒でクリア
-
-  M5.Lcd.setCursor(0, 0);  // カーソルを左上に設定
-  M5.Lcd.println("Starting...");
+  M5.Lcd.setCursor(0, 0);    // カーソルを左上に設定
 
   Serial.begin(115200);
 
@@ -54,21 +52,22 @@ void setup() {
     M5.Lcd.println("Starting AP...");
 
     // APモードを開始
+    appendRandomNumber(ap_ssid);
     WiFi.softAP(ap_ssid, ap_password);
     IPAddress IP = WiFi.softAPIP();
 
-    Serial.print("AP SSID: ");
+    Serial.println("AP SSID:");
     Serial.println(ap_ssid);
-    Serial.print("AP PASSWORD: ");
+    Serial.println("AP PASSWORD:");
     Serial.println(ap_password);
-    Serial.print("AP IP address: ");
+    Serial.println("AP IP address:");
     Serial.println(IP);
 
-    M5.Lcd.print("AP SSID: ");
+    M5.Lcd.println("AP SSID:");
     M5.Lcd.println(ap_ssid);
-    M5.Lcd.print("AP PASSWORD: ");
+    M5.Lcd.println("AP PASSWORD:");
     M5.Lcd.println(ap_password);
-    M5.Lcd.print("AP IP: ");
+    M5.Lcd.println("AP IP:");
     M5.Lcd.println(IP);
 
     // WebサーバのルートでSSIDとパスワードを入力するフォームを提供
@@ -107,59 +106,28 @@ void setup() {
     IPAddress localIP = WiFi.localIP();
     Serial.print("IP Address: ");
     Serial.println(localIP);
-    M5.Lcd.println("IP Address:");
+    M5.Lcd.print("IP:");
     M5.Lcd.println(localIP);
-    M5.Lcd.print("EXT:W/S Grove:W/S");
 
-    EXT_IO.registerCallback([](int code) {
+    EXT_IO.registerCallback([](String message) {
       Serial.print("EXT_IO:");
-      EXT_IO.dispCode(code);
-
-      switch (code) {
-        case BRIDGE_WIFI_OK:
-          comState[0] = 'O';
-          break;
-        case BRIDGE_WIFI_ERROR:
-          comState[0] = 'X';
-          break;
-        case BRIDGE_SERIAL_OK:
-          comState[1] = 'O';
-          break;
-        case BRIDGE_SERIAL_ERROR:
-          comState[1] = 'X';
-          break;
-      }
+      Serial.println(message);
     });
-    Grove.registerCallback([](int code) {
+    Grove.registerCallback([](String message) {
       Serial.print("Grove:");
-      Grove.dispCode(code);
-
-      switch (code) {
-        case BRIDGE_WIFI_OK:
-          comState[2] = 'O';
-          break;
-        case BRIDGE_WIFI_ERROR:
-          comState[2] = 'X';
-          break;
-        case BRIDGE_SERIAL_OK:
-          comState[3] = 'O';
-          break;
-        case BRIDGE_SERIAL_ERROR:
-          comState[3] = 'X';
-          break;
-      }
+      Serial.println(message);
     });
     EXT_IO.start();
     Grove.start();
-  }
 
-  xTaskCreatePinnedToCore(updateComState,   /* タスクの入口となる関数名 */
-                          "updateComState", /* タスクの名称 */
-                          1024,             /* スタックサイズ */
-                          NULL,             /* パラメータのポインタ */
-                          8,                /* プライオリティ */
-                          NULL,             /* ハンドル構造体のポインタ */
-                          0);               /* 割り当てるコア (0/1) */
+    xTaskCreatePinnedToCore(updateComState,   /* タスクの入口となる関数名 */
+                            "updateComState", /* タスクの名称 */
+                            1024,             /* スタックサイズ */
+                            NULL,             /* パラメータのポインタ */
+                            8,                /* プライオリティ */
+                            NULL,             /* ハンドル構造体のポインタ */
+                            0);               /* 割り当てるコア (0/1) */
+  }
 }
 
 void loop() {
@@ -194,18 +162,27 @@ void loop() {
 
 void updateComState(void* params) {
   for (;;) {
-    M5.Lcd.fillRect(0, 119, 240, 135, BLACK);  // 最下部の領域を黒で塗りつぶす
+    M5.Lcd.fillRect(0, 103, 240, 135, BLACK);  // 最下部の領域を黒で塗りつぶす
     // 新しいテキストを描画
-    M5.Lcd.setCursor(0, 119);    // カーソル位置を設定
+    M5.Lcd.setCursor(0, 103);    // カーソル位置を設定
     M5.Lcd.setTextColor(WHITE);  // テキストの色を設定
-    M5.Lcd.print("    ");
-    M5.Lcd.print(comState[0]);
-    M5.Lcd.print("/");
-    M5.Lcd.print(comState[1]);
-    M5.Lcd.print("       ");
-    M5.Lcd.print(comState[2]);
-    M5.Lcd.print("/");
-    M5.Lcd.print(comState[3]);
+
+    M5.Lcd.print("EXT_IO Wifi:");
+    M5.Lcd.print(EXT_IO.getWifiError() == true ? "X" : "O");
+    M5.Lcd.print(" Ser:");
+    M5.Lcd.print(EXT_IO.getSerialError() == true ? "X" : "O");
+    M5.Lcd.println("");
+
+    M5.Lcd.print("Grove Wifi:");
+    M5.Lcd.print(Grove.getWifiError() == true ? "X" : "O");
+    M5.Lcd.print(" Ser:");
+    M5.Lcd.print(Grove.getSerialError() == true ? "X" : "O");
     vTaskDelay(1000 / portTICK_PERIOD_MS);
   }
+}
+
+void appendRandomNumber(char* str) {
+  // 文字列の末尾に直接4桁のランダムな数字を追加
+  randomSeed(millis());  // ランダムシードを設定
+  sprintf(str + strlen(str), "%04d", random(1000, 10000));
 }
