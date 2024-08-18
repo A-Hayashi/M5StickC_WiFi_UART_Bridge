@@ -7,7 +7,7 @@
 Preferences preferences;
 WebServer server(80);
 
-char ap_ssid[20] = "M5StickC-AP";
+char ap_ssid[20] = "M5StickC-AP-";
 const char* ap_password = "12345678";
 
 Bridge EXT_IO(1, 9600, SERIAL_8E1, 0, 26, 8881);  //EXT IO
@@ -173,7 +173,7 @@ void updateComState(void* params) {
     M5.Lcd.print(EXT_IO.getSerialError() == true ? "X" : "O");
     M5.Lcd.println("");
 
-    M5.Lcd.print("Grove Wifi:");
+    M5.Lcd.print("Grove Wifi: ");
     M5.Lcd.print(Grove.getWifiError() == true ? "X" : "O");
     M5.Lcd.print(" Ser:");
     M5.Lcd.print(Grove.getSerialError() == true ? "X" : "O");
@@ -182,7 +182,6 @@ void updateComState(void* params) {
 }
 
 void appendRandomNumber(char* str) {
-  // 文字列の末尾に直接4桁のランダムな数字を追加
-  randomSeed(millis());  // ランダムシードを設定
-  sprintf(str + strlen(str), "%04d", random(1000, 10000));
+  uint32_t rand = esp_random();
+  sprintf(str + strlen(str), "%08X", rand);
 }
